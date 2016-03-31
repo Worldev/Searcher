@@ -44,6 +44,7 @@ class Application(Frame):
     def __init__(self, master=None):
         Frame.__init__(self, master)
         self.master.title('Searcher / Buscador')
+        self.master.resizable(0, 0)
         self.setup(master)
         
     def setup(self, master):
@@ -60,7 +61,7 @@ class Application(Frame):
         self.tex.grid(row=3, column=0)
         
     def getquery(self):
-        if self.query.get() != '' or self.path.get() != None:
+        if self.query.get() != '' or self.lang.get() != '':
             self.tex.delete('1.0', END)
             self.checkquery()
         else:
