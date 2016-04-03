@@ -22,66 +22,14 @@ from tkinter.filedialog import *
 from tkinter.messagebox import *
 from html.parser import HTMLParser
 from html.entities import name2codepoint
-import time
+import webbrowser
 import urllib, urllib.parse, urllib.request
 import json
 try:
     import requests
-    import wikipedia
 except ImportError:
-    print("Error: requests or wikipedia module not installed. Please install it with pip install requests/wikipedia")
+    print("Error: requests module not installed. Please install it with pip install requests")
 
-class Web:
-    def get(uri, timeout=20, headers=None, return_headers=False,
-            limit_bytes=None):
-        """
-        Execute an HTTP GET query on `uri`, and return the result.  `timeout` is an
-        optional argument, which represents how much time we should wait before
-        throwing a timeout exception. It defualts to 20, but can be set to higher
-        values if you are communicating with a slow web application.  `headers` is
-        a dict of HTTP headers to send with the request.  If `return_headers` is
-        True, return a tuple of (bytes, headers)
-        If `limit_bytes` is provided, only read that many bytes from the URL. This
-        may be a good idea when reading from unknown sites, to prevent excessively
-        large files from being downloaded.
-        """
-
-        if not uri.startswith('https'):
-            uri = "https://" + uri
-        u = Web.get_urllib_object(uri, timeout, headers)
-        bytes = u.read(limit_bytes)
-        u.close()
-        if not return_headers:
-            return bytes
-        else:
-            return (bytes, u.info())
-
-
-    def get_urllib_object(uri, timeout, headers=None):
-        """
-        Return a urllib object for `uri` and `timeout` and `headers`. This is
-        better than using urrlib2 directly, for it handles redirects, makes sure
-        URI is utf8, and is shorter and easier to use.  Modules may use this if
-        they need a urllib object to execute .read() on. For more information,
-        refer to the urllib documentation.
-        """
-        try:
-            uri = uri.encode("utf-8")
-        except:
-            pass
-        original_headers = {'Accept': '*/*', 'User-Agent': 'Mozilla/5.0 (Searcher)'}
-        if headers is not None:
-            original_headers.update(headers)
-        else:
-            headers = original_headers
-        req = urllib.request.Request(uri, headers=headers)
-        try:
-            u = urllib.request.urlopen(req, None, timeout)
-        except urllib.request.HTTPError as e:
-            # Even when there's an error (say HTTP 404), return page contents
-            return e.fp
-
-        return u
 
 class MyHTMLParser(HTMLParser):
     def handle_starttag(self, tag, attrs):
@@ -157,8 +105,8 @@ class Application(Frame):
         self.tex.see(END)
         return hits
 
-    def w_search(self, lang, query, prop='extracts'):
-        url = 'https://%s.wikipedia.org/w/api.php?action=query&titles=%s&format=json&prop=%s&exintro&explaintext&redirects' % (lang, query, prop)
+    def w_search(self, lang, query):
+        url = 'https://%s.wikipedia.org/w/api.php?action=query&titles=%s&format=json&prop=extracts&exintro&explaintext&redirects' % (lang, query)
         search_response = urllib.request.urlopen(url)
         search_results = search_response.read().decode("utf8")
         snippet = json.loads(search_results)
@@ -179,18 +127,11 @@ class Application(Frame):
         except Exception as e:
             self.tex2.insert(END, e)
             self.tex2.see(END)
-        self.save_info = Button(self.master, text="Save Wikipedia Article (FULL)", command=self.save).grid(row=4, column=3)
+        self.save_info = Button(self.master, text="See Wikipedia Article", command=self.see).grid(row=4, column=3)
 
-    def save(self):
-        path = asksaveasfile(mode='w', defaultextension=".txt", filetypes=(("Text files", "*.txt"),("All files", "*.*")))
-        try:
-            path = path.name
-            with open(path, 'w') as file:
-                wikipedia_info = self.article.content
-                file.write(wikipedia_info)
-                file.close()
-        except AttributeError:
-            pass
+    def see(self):
+        webbrowser.open('https://%s.wikipedia.org/wiki/%s' % (self.lang.get(), self.query.get()))
+
             
 
 root = Tk()
