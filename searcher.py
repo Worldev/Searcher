@@ -60,7 +60,7 @@ class Application(Frame):
         self.tex.grid(row=3, column=0)
         
     def getquery(self):
-        if self.query.get() != '' or self.lang.get() != '':
+        if self.query.get() != '' and self.lang.get() != '':
             self.tex.delete('1.0', END)
             self.checkquery()
         else:
