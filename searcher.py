@@ -19,6 +19,7 @@
 """
 from tkinter import *
 from tkinter.filedialog import *
+from tkinter.messagebox import *
 from html.parser import HTMLParser
 from html.entities import name2codepoint
 import time
@@ -30,7 +31,57 @@ try:
 except ImportError:
     print("Error: requests or wikipedia module not installed. Please install it with pip install requests/wikipedia")
 
-    
+class Web:
+    def get(uri, timeout=20, headers=None, return_headers=False,
+            limit_bytes=None):
+        """
+        Execute an HTTP GET query on `uri`, and return the result.  `timeout` is an
+        optional argument, which represents how much time we should wait before
+        throwing a timeout exception. It defualts to 20, but can be set to higher
+        values if you are communicating with a slow web application.  `headers` is
+        a dict of HTTP headers to send with the request.  If `return_headers` is
+        True, return a tuple of (bytes, headers)
+        If `limit_bytes` is provided, only read that many bytes from the URL. This
+        may be a good idea when reading from unknown sites, to prevent excessively
+        large files from being downloaded.
+        """
+
+        if not uri.startswith('https'):
+            uri = "https://" + uri
+        u = Web.get_urllib_object(uri, timeout, headers)
+        bytes = u.read(limit_bytes)
+        u.close()
+        if not return_headers:
+            return bytes
+        else:
+            return (bytes, u.info())
+
+
+    def get_urllib_object(uri, timeout, headers=None):
+        """
+        Return a urllib object for `uri` and `timeout` and `headers`. This is
+        better than using urrlib2 directly, for it handles redirects, makes sure
+        URI is utf8, and is shorter and easier to use.  Modules may use this if
+        they need a urllib object to execute .read() on. For more information,
+        refer to the urllib documentation.
+        """
+        try:
+            uri = uri.encode("utf-8")
+        except:
+            pass
+        original_headers = {'Accept': '*/*', 'User-Agent': 'Mozilla/5.0 (Searcher)'}
+        if headers is not None:
+            original_headers.update(headers)
+        else:
+            headers = original_headers
+        req = urllib.request.Request(uri, headers=headers)
+        try:
+            u = urllib.request.urlopen(req, None, timeout)
+        except urllib.request.HTTPError as e:
+            # Even when there's an error (say HTTP 404), return page contents
+            return e.fp
+
+        return u
 
 class MyHTMLParser(HTMLParser):
     def handle_starttag(self, tag, attrs):
@@ -65,19 +116,21 @@ class Application(Frame):
             self.tex.delete('1.0', END)
             self.checkquery()
         else:
-            self.tk = Tk()
-            self.tk.title('Whoops!')
-            Label(self.tk, text="The query is empty").grid()
-            Button(self.tk, text="Close", command=self.tk.destroy).grid(row=1, column=1, sticky=W)
+            showwarning("Alert!", "You have left some fileds empty")
 
     def checkquery(self):
-        check_wikipedia = requests.get('https://' + self.lang.get() + '.wikipedia.org/wiki/' + self.query.get())
-        if check_wikipedia.status_code == 200:
-            self.wikipedia(self.lang.get(), self.query.get())
-        else:
-            self.tex.insert(END, 'This query doesn\'t have an article in Wikipedia\n')
-            self.tex.see(END)
-        self.search(self.query.get())                        
+        try:
+            check_wikipedia = requests.get('https://' + self.lang.get() + '.wikipedia.org/wiki/' + self.query.get())
+
+            if check_wikipedia.status_code == 200:
+                self.wikipedia(self.lang.get(), self.query.get())
+            else:
+                self.tex.insert(END, 'This query doesn\'t have an article in Wikipedia\n')
+                self.tex.see(END)
+            self.search(self.query.get())
+        except requests.exceptions.InvalidURL:
+            showerror("Error!", "You cannot live the language code empty")
+
 
     def search(self, search_string):
         """Search a query to Google"""
@@ -103,16 +156,25 @@ class Application(Frame):
         self.tex.insert(END, 'For more results, see %s' % data['cursor']['moreResultsUrl'] + "\n")
         self.tex.see(END)
         return hits
-    
+
+    def w_search(self, lang, query, prop='extracts'):
+        url = 'https://%s.wikipedia.org/w/api.php?action=query&titles=%s&format=json&prop=%s&exintro&explaintext&redirects' % (lang, query, prop)
+        search_response = urllib.request.urlopen(url)
+        search_results = search_response.read().decode("utf8")
+        snippet = json.loads(search_results)
+        snippet = snippet['query']['pages']
+        id = str(list(snippet.keys())[0])
+        snippet = snippet[id]
+        return snippet['extract']
+
     def wikipedia(self, lang, query):
         """Search a query to Wikipedia"""
-        wikipedia.set_lang(lang)
         Label(self.master, text="Wikipedia article summary:").grid(row=2, column=3)
         self.tex2 = Text(self.master)
         self.tex2.grid(row=3, column=3)
         try:
-            self.article = wikipedia.page(query)           
-            self.tex2.insert(END, self.article.summary)
+            ws = self.w_search(lang, query)
+            self.tex2.insert(END, ws)
             self.tex2.see(END)
         except Exception as e:
             self.tex2.insert(END, e)
@@ -121,11 +183,14 @@ class Application(Frame):
 
     def save(self):
         path = asksaveasfile(mode='w', defaultextension=".txt", filetypes=(("Text files", "*.txt"),("All files", "*.*")))
-        path = path.name
-        with open(path, 'w') as file:
-            wikipedia_info = self.article.content
-            file.write(wikipedia_info)
-            file.close()
+        try:
+            path = path.name
+            with open(path, 'w') as file:
+                wikipedia_info = self.article.content
+                file.write(wikipedia_info)
+                file.close()
+        except AttributeError:
+            pass
             
 
 root = Tk()
