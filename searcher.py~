@@ -77,7 +77,7 @@ class Application(Frame):
             else:
                 self.tex.insert(END, 'This query doesn\'t have an article in Wikipedia\n')
                 self.tex.see(END)
-            self.search(self.query)
+            self.search(self.query.get())
         except requests.exceptions.InvalidURL:
             showerror("Error!", "You cannot live the language code empty")
 
