@@ -108,7 +108,8 @@ class Application(Frame):
         return hits
 
     def w_search(self, lang, query):
-        url = 'https://%s.wikipedia.org/w/api.php?action=query&titles=%s&format=json&prop=extracts&exintro&explaintext&redirects' % (lang, query)
+        query = urllib.parse.urlencode({'titles':query}, encoding='utf-8')
+        url = 'https://%s.wikipedia.org/w/api.php?action=query&%s&format=json&prop=extracts&exintro&explaintext&redirects' % (lang, query)
         search_response = urllib.request.urlopen(url)
         search_results = search_response.read().decode("utf8")
         snippet = json.loads(search_results)
