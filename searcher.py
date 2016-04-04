@@ -68,16 +68,14 @@ class Application(Frame):
 
     def checkquery(self):
         try:
-            self.query = self.query.get().encode('utf-8')
-            self.query = bytes.decode(self.query)
-            check_wikipedia = requests.get('https://' + self.lang.get() + '.wikipedia.org/wiki/' + self.query)
+            check_wikipedia = requests.get('https://' + self.lang.get() + '.wikipedia.org/wiki/' + self.query.get())
 
             if check_wikipedia.status_code == 200:
-                self.wikipedia(self.lang.get(), self.query)
+                self.wikipedia(self.lang.get(), self.query.get())
             else:
                 self.tex.insert(END, 'This query doesn\'t have an article in Wikipedia\n')
                 self.tex.see(END)
-            self.search(self.query)
+            self.search(self.query.get())
         except requests.exceptions.InvalidURL:
             showerror("Error!", "You cannot live the language code empty")
 
@@ -133,7 +131,7 @@ class Application(Frame):
         self.save_info = Button(self.master, text="See Wikipedia Article", command=self.see).grid(row=4, column=3)
 
     def see(self):
-        webbrowser.open('https://%s.wikipedia.org/wiki/%s' % (self.lang.get(), self.query))
+        webbrowser.open('https://%s.wikipedia.org/wiki/%s' % (self.lang.get(), self.query.get()))
 
             
 
